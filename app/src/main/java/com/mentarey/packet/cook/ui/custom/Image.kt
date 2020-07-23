@@ -1,6 +1,8 @@
 package com.mentarey.packet.cook.ui.custom
 
-import androidx.compose.*
+import androidx.compose.Composable
+import androidx.compose.launchInComposition
+import androidx.compose.state
 import androidx.core.graphics.drawable.toBitmap
 import androidx.ui.core.ContentScale
 import androidx.ui.core.ContextAmbient
@@ -10,15 +12,18 @@ import androidx.ui.graphics.ImageAsset
 import androidx.ui.graphics.asImageAsset
 import coil.Coil
 import coil.request.GetRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun CoilImage(modifier: Modifier, imageUrl: String, defaultImageAsset: ImageAsset) {
     val context = ContextAmbient.current
-    var imageState: ImageAsset by state { defaultImageAsset }
+    val imageState = state { defaultImageAsset }
     launchInComposition {
         val request = GetRequest.Builder(context).data(imageUrl).build()
-        imageState = try {
-            when (val urlDrawable = Coil.execute(request).drawable) {
+        imageState.value = try {
+            val urlDrawable = withContext(Dispatchers.IO) { Coil.execute(request).drawable }
+            when (urlDrawable) {
                 null -> defaultImageAsset
                 else -> urlDrawable.toBitmap().asImageAsset()
             }
@@ -26,5 +31,5 @@ fun CoilImage(modifier: Modifier, imageUrl: String, defaultImageAsset: ImageAsse
             defaultImageAsset
         }
     }
-    Image(asset = imageState, modifier = modifier, contentScale = ContentScale.Crop)
+    Image(asset = imageState.value, modifier = modifier, contentScale = ContentScale.Crop)
 }
